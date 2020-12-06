@@ -23,6 +23,7 @@
 
 #include "object_detect.h"
 #include "utils.h"
+#include "tic_toc.h"
 using namespace std;
 
 namespace {
@@ -33,10 +34,10 @@ const char* kModelPath = "../model/yolov3.om";
 
 int main(int argc, char *argv[]) {
     //Check input args: the path of input picture, and ignore hidden dotfile directory
-    if((argc != 2) || (argv[1] == nullptr)){
-        ERROR_LOG("Please input: ./main <image_dir>");
-        return FAILED;
-    }
+//    if((argc != 2) || (argv[1] == nullptr)){
+//        ERROR_LOG("Please input: ./main <image_dir>");
+//        return FAILED;
+//    }
     //Instantiate the object detection class
     ObjectDetect detect(kModelPath, kModelWidth, kModelHeight);
     //Initialize the acl resources, dvpp, load model, 
@@ -48,7 +49,7 @@ int main(int argc, char *argv[]) {
     }
 
     //Get all the image file path in the image directory
-    string inputImageDir = string(argv[1]);
+    string inputImageDir = string("../data");
     vector<string> fileVec;
     Utils::GetAllFiles(inputImageDir, fileVec);
     if (fileVec.empty()) {
@@ -56,9 +57,10 @@ int main(int argc, char *argv[]) {
                   "directory is ignored", inputImageDir.c_str());
         return FAILED;
     }
-
+    TicToc tic;
     ImageData image;
     for (string imageFile : fileVec) {
+        tic.restart_toc();
         Utils::ReadImageFile(image, imageFile);
         if (image.data == nullptr) {
             ERROR_LOG("Read image %s failed", imageFile.c_str());
@@ -73,14 +75,18 @@ int main(int argc, char *argv[]) {
                       imageFile.c_str());                
             continue;
         }
+        tic.toc_print("Load JPEG");
         //Send the resized picture to the model for inference 
         //and get the inference results
+        tic.restart_toc();
         aclmdlDataset* inferenceOutput = nullptr;
         ret = detect.Inference(inferenceOutput, resizedImage);
         if ((ret != SUCCESS) || (inferenceOutput == nullptr)) {
             ERROR_LOG("Inference model inference output data failed");
             return FAILED;
         }
+        tic.toc_print("Inference model");
+        tic.restart_toc();
         //Analyze the inference output, mark the object category and 
         //location by the inference result
         ret = detect.Postprocess(image, inferenceOutput, imageFile);
@@ -88,6 +94,7 @@ int main(int argc, char *argv[]) {
             ERROR_LOG("Process model inference output data failed");
             return FAILED;
         }
+        tic.toc_print("Process model");
     }
 
     INFO_LOG("Execute sample success");
