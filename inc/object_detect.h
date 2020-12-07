@@ -37,8 +37,7 @@ public:
     Result Init();
     Result Preprocess(ImageData& resizedImage, ImageData& srcImage);
     Result Inference(aclmdlDataset*& inferenceOutput, ImageData& resizedImage);
-    Result Postprocess(ImageData& image, aclmdlDataset* modelOutput,
-                       const string& origImagePath);
+    Result Postprocess(ImageData& image, aclmdlDataset* modelOutput, std::vector<BBox> &detectResults);
 private:
     Result InitResource();
     Result InitModel(const char* omModelPath);

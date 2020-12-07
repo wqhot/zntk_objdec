@@ -240,8 +240,7 @@ ImageData& resizedImage) {
     return SUCCESS;
 }
 
-Result ObjectDetect::Postprocess(ImageData& image, aclmdlDataset* modelOutput,
-const string& origImagePath) {
+Result ObjectDetect::Postprocess(ImageData& image, aclmdlDataset* modelOutput, std::vector<BBox> &detectResults) {
     uint32_t dataSize = 0;
     float* detectData = (float *)GetInferenceOutputItem(dataSize, modelOutput,
     kBBoxDataBufId);
@@ -251,7 +250,7 @@ const string& origImagePath) {
     if (boxNum == nullptr) return FAILED;
 
     uint32_t totalBox = boxNum[0];
-    vector<BBox> detectResults;
+    detectResults.clear();
     float widthScale = (float)(image.width) / modelWidth_;
     float heightScale = (float)(image.height) / modelHeight_;
     for (uint32_t i = 0; i < totalBox; i++) {
@@ -266,9 +265,11 @@ const string& origImagePath) {
         boundBox.rect.rbY = detectData[totalBox * BOTTOMRIGHTY + i] * heightScale;
 
         uint32_t objIndex = (uint32_t)detectData[totalBox * LABEL + i];
-        boundBox.text = yolov3Label[objIndex] + std::to_string(score) + "\%";
-        printf("%d %d %d %d %s\n", boundBox.rect.ltX, boundBox.rect.ltY,
-        boundBox.rect.rbX, boundBox.rect.rbY, boundBox.text.c_str());
+        boundBox.label_id = objIndex;
+        boundBox.score = score;
+//        boundBox.text = yolov3Label[objIndex] + std::to_string(score) + "\%";
+//        printf("%d %d %d %d %s\n", boundBox.rect.ltX, boundBox.rect.ltY,
+//        boundBox.rect.rbX, boundBox.rect.rbY, boundBox.text.c_str());
 
         detectResults.emplace_back(boundBox);
     }
@@ -331,8 +332,8 @@ void ObjectDetect::DrawBoundBoxToImage(vector<BBox>& detectionResults,
         p2.x = detectionResults[i].rect.rbX;
         p2.y = detectionResults[i].rect.rbY;
         cv::rectangle(image, p1, p2, kColors[i % kColors.size()], kLineSolid);
-        cv::putText(image, detectionResults[i].text, cv::Point(p1.x, p1.y + kLabelOffset),
-        cv::FONT_HERSHEY_COMPLEX, kFountScale, kFontColor);
+//        cv::putText(image, detectionResults[i].text, cv::Point(p1.x, p1.y + kLabelOffset),
+//        cv::FONT_HERSHEY_COMPLEX, kFountScale, kFontColor);
     }
 
     int pos = origImagePath.find_last_of("/");

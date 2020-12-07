@@ -88,7 +88,7 @@ struct Rect {
 struct BBox {
     Rect rect;
     uint32_t score;
-    string text;
+    uint32_t label_id;
 };
 
 /**
