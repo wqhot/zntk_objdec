@@ -61,18 +61,17 @@ int DetectThread::detect_func(DetectThread *handler)
             ERROR_LOG("Process model inference output data failed");
             continue;
         }
-        if (detect_result.size() > 0)
-        {
-            std::vector<u_char> send_buffer;
-            handler->result_to_uchars(detect_result, send_buffer);
-            handler->sock.sendTo(&send_buffer[0], send_buffer.size(),
-                                 handler->client_address, handler->client_port);
-            std::cout << "send result " << send_buffer.size() << std::endl;
-        }
+
+        std::vector<u_char> send_buffer;
+        handler->result_to_uchars(detect_result, send_buffer);
+        handler->sock.sendTo(&send_buffer[0], send_buffer.size(),
+                             handler->client_address, handler->client_port);
+        std::cout << "send result " << send_buffer.size() << std::endl;
+
     }
 }
 
-u_char DetectThread::uint2chars(double num, std::vector<unsigned char> &cs)
+u_char DetectThread::uint2chars(uint32_t num, std::vector<unsigned char> &cs)
 {
     union {
         uint8_t d;
