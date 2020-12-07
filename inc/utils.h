@@ -24,6 +24,7 @@
 #include "opencv2/opencv.hpp"
 #include "opencv2/imgcodecs/legacy/constants_c.h"
 #include "opencv2/imgproc/types_c.h"
+#include "opencv2/core.hpp"
 
 using namespace std;
 
@@ -116,6 +117,7 @@ public:
     static void* CopyDataHostToDevice(void* deviceData, uint32_t dataSize);
     static void* CopyDataDeviceToDevice(void* deviceData, uint32_t dataSize);
     static int ReadImageFile(ImageData& image, std::string fileName);
+    static int get_image_from_buffer(ImageData& image, u_int8_t *binFileBufferData, uint32_t binFileBufferLen);
     static Result CopyImageDataToDevice(ImageData& imageDevice, ImageData srcImage, aclrtRunMode mode);
 };
 

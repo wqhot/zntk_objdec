@@ -227,3 +227,18 @@ int Utils::ReadImageFile(ImageData& image, std::string fileName)
 
     return SUCCESS;
 }
+
+int Utils::get_image_from_buffer(ImageData& image, u_int8_t *binFileBufferData, uint32_t binFileBufferLen)
+{
+    if (binFileBufferData == nullptr) {
+        ERROR_LOG("malloc binFileBufferData failed");
+        return FAILED;
+    }
+
+    int32_t ch = 0;
+    acldvppJpegGetImageInfo(binFileBufferData, binFileBufferLen,
+                            &(image.width), &(image.height), &ch);
+    image.data.reset(binFileBufferData, [](uint8_t* p) { delete[](p); });
+    image.size = binFileBufferLen;
+    return SUCCESS;
+}

@@ -10,8 +10,8 @@ project(classification)
 add_compile_options(-std=c++11)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  "../../../out")
-set(CMAKE_CXX_FLAGS_DEBUG "-fPIC -O0 -g -Wall")
-set(CMAKE_CXX_FLAGS_RELEASE "-fPIC -O2 -Wall")
+set(CMAKE_CXX_FLAGS_DEBUG "-fPIC -O0 -g -Wall -pthread")
+set(CMAKE_CXX_FLAGS_RELEASE "-fPIC -O2 -Wall -pthread")
 
 add_definitions(-DENABLE_DVPP_INTERFACE)
 set(INC_PATH $ENV{DDK_PATH})
@@ -38,6 +38,8 @@ else ()
     set(ARCH "x86")
 endif()
 
+find_package(Threads)
+
 # Header path
 include_directories(
     $ENV{HOME}/ascend_ddk/${ARCH}/include/
@@ -57,19 +59,33 @@ link_directories(
     ${INC_PATH}/atc/lib64
 )
 
-add_executable(main
+add_library(aclib_util STATIC
         utils.cpp
         model_process.cpp
         object_detect.cpp
         dvpp_process.cpp
         dvpp_resize.cpp
         dvpp_jpegd.cpp
-        main.cpp)
+        )
 
-if(target STREQUAL "Simulator_Function")
-    target_link_libraries(main funcsim)
-else()
-    target_link_libraries(main ascendcl acl_dvpp stdc++ opencv_core opencv_imgproc opencv_imgcodecs dl rt)
-endif()
+add_library(translib STATIC
+        recv_thread.cpp
+        thread_manage.cpp
+        detect_thread.cpp
+        PracticalSocket.cpp
+        dvpp_resize.cpp
+        dvpp_jpegd.cpp
+        )
 
-install(TARGETS main DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+target_link_libraries(translib aclib_util ascendcl acl_dvpp stdc++ opencv_core opencv_imgproc opencv_imgcodecs dl rt ${CMAKE_THREAD_LIBS_INIT})
+
+add_executable(main main.cpp)
+target_link_libraries(main translib aclib_util)
+
+# if(target STREQUAL "Simulator_Function")
+#    target_link_libraries(main aclib_util trans libfuncsim)
+# else()
+#     target_link_libraries(main trans)
+# endif()
+
+# install(TARGETS main DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})

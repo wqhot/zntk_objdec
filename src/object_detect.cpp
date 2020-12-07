@@ -273,7 +273,7 @@ const string& origImagePath) {
         detectResults.emplace_back(boundBox);
     }
 
-    DrawBoundBoxToImage(detectResults, origImagePath);
+//    DrawBoundBoxToImage(detectResults, origImagePath);
     if (runMode_ == ACL_HOST) {
         delete[]((uint8_t *)detectData);
         delete[]((uint8_t*)boxNum);
