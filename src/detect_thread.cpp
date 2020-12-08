@@ -66,41 +66,46 @@ int DetectThread::detect_func(DetectThread *handler)
         handler->result_to_uchars(detect_result, send_buffer);
         handler->sock.sendTo(&send_buffer[0], send_buffer.size(),
                              handler->client_address, handler->client_port);
-        std::cout << "send result " << send_buffer.size() << std::endl;
+//        std::cout << "send result " << send_buffer.size() << std::endl;
 
     }
 }
 
 u_char DetectThread::uint2chars(uint32_t num, std::vector<unsigned char> &cs)
 {
-    union {
-        uint8_t d;
-        unsigned char t[4];
-    } transfer;
-    transfer.d = num;
     u_char check = 0;
     for (int i = 0; i < 4; i++)
     {
-        cs.push_back(transfer.t[i]);
-        check += transfer.t[i];
+        uint32_t num_c = (num & (0xFF << (i * 8))) >> (i * 8);
+        cs.push_back(num_c);
+        check += num_c;
     }
     return check;
 }
 
-Result DetectThread::result_to_uchars(const std::vector<BBox> &detect_result, std::vector<u_char> &send_buffer)
+static void print_BBox(BBox &bbox)
+{
+        std::cout << "[" << bbox.rect.ltX
+        << ", "<< bbox.rect.ltY
+        << "  "<< bbox.rect.rbX
+        << ", "<< bbox.rect.rbY
+        << "]: " << bbox.label_id
+        << ": " << bbox.score <<std::endl;
+}
+
+Result DetectThread::result_to_uchars(std::vector<BBox> &detect_result, std::vector<u_char> &send_buffer)
 {
     // head: 0x7f 0x7f 0x7f 0x7f
     // num
     // ltx lty rbx rby score label
     // checknum
-    if (detect_result.size() > 0)
-    {
+
         send_buffer = std::vector<u_char> {0x7f, 0x7f, 0x7f, 0x7f};
         // num
         u_char check;
-        std::cout << "detecet result: " << detect_result.size() << std::endl;
+//        std::cout << "detecet result: " << detect_result.size() << std::endl;
         check += uint2chars(detect_result.size(), send_buffer);
-        std::cout << (int)send_buffer[4] << " " << (int)send_buffer[5] << " " << (int)send_buffer[6] << " " << (int)send_buffer[7] << " " << std::endl;
+//        std::cout << (int)send_buffer[4] << " " << (int)send_buffer[5] << " " << (int)send_buffer[6] << " " << (int)send_buffer[7] << " " << std::endl;
         for (int i = 0; i != detect_result.size(); ++i)
         {
             check += uint2chars(detect_result[i].rect.ltX, send_buffer);
@@ -109,9 +114,10 @@ Result DetectThread::result_to_uchars(const std::vector<BBox> &detect_result, st
             check += uint2chars(detect_result[i].rect.rbY, send_buffer);
             check += uint2chars(detect_result[i].score, send_buffer);
             check += uint2chars(detect_result[i].label_id, send_buffer);
+//            print_BBox(detect_result[i]);
         }
         send_buffer.push_back(check);
-    }
+
     return SUCCESS;
 }
 

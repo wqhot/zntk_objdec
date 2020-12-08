@@ -26,7 +26,7 @@ void RecvThread::recv_server(RecvThread *handler)
         } while (recvMsgSize > sizeof(int));
         uint32_t total_length = ((int * ) buffer)[0];
         int total_pack = 1 + (total_length - 1) / PACK_SIZE;
-        cout << "expecting length of packs:" << total_length << endl;
+//        cout << "expecting length of packs:" << total_length << endl;
         u_int8_t * longbuf = new(std::nothrow) u_int8_t[total_length];
         int recv_length = 0;
         for (int i = 0; i < total_pack; i++) {
@@ -39,7 +39,7 @@ void RecvThread::recv_server(RecvThread *handler)
             std::cerr << "Received unexpected size pack:" << recv_length << ", except " << total_length << std::endl;
             continue;
         }
-        cout << "Received packet from " << sourceAddress << ":" << handler->serv_port << endl;
+//        cout << "Received packet from " << sourceAddress << ":" << handler->serv_port << endl;
         ImageData image;
         Utils::get_image_from_buffer(image, longbuf, total_length);
         basic_item insert_item(image, get_current_time());

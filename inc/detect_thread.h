@@ -12,7 +12,7 @@
 class DetectThread {
     private:
     static int detect_func(DetectThread *handler);
-    Result result_to_uchars(const std::vector<BBox> &detect_result, std::vector<u_char> &send_buffer);
+    Result result_to_uchars(std::vector<BBox> &detect_result, std::vector<u_char> &send_buffer);
     u_char uint2chars(uint32_t num, std::vector<unsigned char> &cs);
 
     public:

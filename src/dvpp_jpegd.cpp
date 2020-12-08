@@ -93,7 +93,7 @@ Result DvppJpegD::Process(ImageData& dest, ImageData& src){
     dest.alignHeight = ALIGN_UP16(src.height);
     dest.size = YUV420SP_SIZE(dest.alignWidth, dest.alignHeight);
     dest.data = SHARED_PRT_DVPP_BUF(decodeOutBufferDev_);
-    INFO_LOG("convert image success");
+//    INFO_LOG("convert image success");
 
     return SUCCESS;
 }
