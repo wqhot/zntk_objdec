@@ -18,14 +18,22 @@ void RecvThread::recv_server(RecvThread *handler)
     int recvMsgSize; // Size of received message
     string sourceAddress; // Address of datagram source
     unsigned short sourcePort; // Port of datagram source
+    int id;
     while (true)
     {
         // Block until receive message from a client
         do {
             recvMsgSize = handler->sock.recvFrom(buffer, BUF_LEN, sourceAddress, handler->serv_port);
         } while (recvMsgSize > sizeof(int));
+        if (!handler->detect_thread.runing)
+        {
+            handler->detect_thread.start(sourceAddress);
+        }
         uint32_t total_length = ((int * ) buffer)[0];
         int total_pack = 1 + (total_length - 1) / PACK_SIZE;
+        do {
+            id = handler->sock.recvFrom(buffer, BUF_LEN, sourceAddress, handler->serv_port);
+        } while (id > sizeof(int));
 //        cout << "expecting length of packs:" << total_length << endl;
         u_int8_t * longbuf = new(std::nothrow) u_int8_t[total_length];
         int recv_length = 0;
@@ -42,7 +50,7 @@ void RecvThread::recv_server(RecvThread *handler)
 //        cout << "Received packet from " << sourceAddress << ":" << handler->serv_port << endl;
         ImageData image;
         Utils::get_image_from_buffer(image, longbuf, total_length);
-        basic_item insert_item(image, get_current_time());
+        basic_item insert_item(image, id);
         g_thread_manager.insert_queue(handler->queue_id, insert_item);
     }
 }
@@ -50,6 +58,7 @@ void RecvThread::recv_server(RecvThread *handler)
 RecvThread::RecvThread(unsigned short serv_port) : serv_port(serv_port), sock(serv_port)
 {
     RecvThread::queue_id = g_thread_manager.add_queue();
+    detect_thread.init(queue_id, "10003");
     std::thread th(recv_server, this);
     th.detach();
 }

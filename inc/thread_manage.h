@@ -14,7 +14,7 @@
 #include <memory>
 #include "utils.h"
 
-typedef std::pair<ImageData, double> basic_item;
+typedef std::pair<ImageData, int> basic_item;
 
 struct mutex_struct{
     std::mutex mtx;

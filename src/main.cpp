@@ -42,7 +42,7 @@ threadManage g_thread_manager;
 int main(int argc, char *argv[]) {
 
     RecvThread recv_thread(10001);
-    DetectThread detect_thread(recv_thread.queue_id, "192.168.50.61", "10003");
+//    DetectThread detect_thread(recv_thread.queue_id, "192.168.50.218", "10003");
     while (1)
     {
         sleep(1);

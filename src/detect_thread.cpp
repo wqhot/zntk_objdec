@@ -35,6 +35,7 @@ int DetectThread::detect_func(DetectThread *handler)
             continue;
         }
         ImageData image = item.first;
+        int id = item.second;
         if (image.data == nullptr) {
             ERROR_LOG("Read image failed");
             continue;
@@ -63,10 +64,10 @@ int DetectThread::detect_func(DetectThread *handler)
         }
 
         std::vector<u_char> send_buffer;
-        handler->result_to_uchars(detect_result, send_buffer);
+        handler->result_to_uchars(detect_result, id, send_buffer);
         handler->sock.sendTo(&send_buffer[0], send_buffer.size(),
                              handler->client_address, handler->client_port);
-//        std::cout << "send result " << send_buffer.size() << std::endl;
+        std::cout << "send result " << send_buffer.size() << std::endl;
 
     }
 }
@@ -93,7 +94,7 @@ static void print_BBox(BBox &bbox)
         << ": " << bbox.score <<std::endl;
 }
 
-Result DetectThread::result_to_uchars(std::vector<BBox> &detect_result, std::vector<u_char> &send_buffer)
+Result DetectThread::result_to_uchars(std::vector<BBox> &detect_result, int id, std::vector<u_char> &send_buffer)
 {
     // head: 0x7f 0x7f 0x7f 0x7f
     // num
@@ -104,6 +105,7 @@ Result DetectThread::result_to_uchars(std::vector<BBox> &detect_result, std::vec
         // num
         u_char check;
 //        std::cout << "detecet result: " << detect_result.size() << std::endl;
+        check += uint2chars(id, send_buffer);
         check += uint2chars(detect_result.size(), send_buffer);
 //        std::cout << (int)send_buffer[4] << " " << (int)send_buffer[5] << " " << (int)send_buffer[6] << " " << (int)send_buffer[7] << " " << std::endl;
         for (int i = 0; i != detect_result.size(); ++i)
@@ -121,9 +123,29 @@ Result DetectThread::result_to_uchars(std::vector<BBox> &detect_result, std::vec
     return SUCCESS;
 }
 
-DetectThread::DetectThread(int get_queue_id, std::string client_address, std::string client_port): get_queue_id(get_queue_id), client_address(client_address)
+DetectThread::DetectThread(int get_queue_id, std::string client_address, std::string client_port): get_queue_id(get_queue_id), client_address(client_address), runing(true)
 {
     DetectThread::client_port = Socket::resolveService(client_port, "udp");
+    std::thread th(detect_func, this);
+    th.detach();
+}
+
+DetectThread::DetectThread(): runing(false)
+{
+
+}
+
+
+void DetectThread::init(int get_queue_id, std::string client_port)
+{
+    DetectThread::client_port = Socket::resolveService(client_port, "udp");
+    DetectThread::get_queue_id = get_queue_id;
+}
+
+void DetectThread::start(std::string client_address)
+{
+    DetectThread::client_address = client_address;
+    runing = true;
     std::thread th(detect_func, this);
     th.detach();
 }
