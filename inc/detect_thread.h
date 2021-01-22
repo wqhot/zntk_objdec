@@ -21,10 +21,8 @@ class DetectThread {
     unsigned short serv_port;
     std::string client_address;
     unsigned short client_port;
-//    DetectThread();
-//    bool runing;
-//    void start(std::string client_address);
-//    void init(int get_queue_id, std::string client_port);
+    bool set;
+    void setip(std::string client_address);
     DetectThread(int get_queue_id, std::string client_address, std::string client_port);
 };
 

@@ -43,6 +43,7 @@ int main(int argc, char *argv[]) {
 
     RecvThread recv_thread(10001);
     DetectThread detect_thread(recv_thread.queue_id, "192.168.50.218", "10003");
+    recv_thread.detect_thread = &detect_thread;
     while (1)
     {
         sleep(1);

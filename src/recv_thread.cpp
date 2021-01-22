@@ -25,10 +25,10 @@ void RecvThread::recv_server(RecvThread *handler)
         do {
             recvMsgSize = handler->sock.recvFrom(buffer, BUF_LEN, sourceAddress, handler->serv_port);
         } while (recvMsgSize > sizeof(int));
-//        if (!handler->detect_thread.runing)
-//        {
-//            handler->detect_thread.start(sourceAddress);
-//        }
+        if (!handler->detect_thread->set)
+        {
+            handler->detect_thread->setip(sourceAddress);
+        }
         uint32_t total_length = ((int * ) buffer)[0];
         int total_pack = 1 + (total_length - 1) / PACK_SIZE;
         do {
@@ -59,7 +59,6 @@ void RecvThread::recv_server(RecvThread *handler)
 RecvThread::RecvThread(unsigned short serv_port) : serv_port(serv_port), sock(serv_port)
 {
     RecvThread::queue_id = g_thread_manager.add_queue();
-//    detect_thread.init(queue_id, "10003");
     std::thread th(recv_server, this);
     th.detach();
 }

@@ -126,6 +126,7 @@ Result DetectThread::result_to_uchars(std::vector<BBox> &detect_result, int id, 
 DetectThread::DetectThread(int get_queue_id, std::string client_address, std::string client_port): get_queue_id(get_queue_id), client_address(client_address)
 {
     DetectThread::client_port = Socket::resolveService(client_port, "udp");
+    set = false;
     std::thread th(detect_func, this);
     th.detach();
 }
@@ -142,10 +143,8 @@ DetectThread::DetectThread(int get_queue_id, std::string client_address, std::st
 //    DetectThread::get_queue_id = get_queue_id;
 //}
 //
-//void DetectThread::start(std::string client_address)
-//{
-//    DetectThread::client_address = client_address;
-//    runing = true;
-//    std::thread th(detect_func, this);
-//    th.detach();
-//}
+void DetectThread::setip(std::string client_address)
+{
+    DetectThread::client_address = client_address;
+    set = true;
+}
