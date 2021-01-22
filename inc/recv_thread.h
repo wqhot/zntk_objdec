@@ -10,13 +10,13 @@
 #include <mutex>
 #include "thread_manage.h"
 #include "PracticalSocket.h"
-#include "detect_thread.h"
+//#include "detect_thread.h"
 
 class RecvThread
 {
 private:
     static void recv_server(RecvThread *recvThread);
-    DetectThread detect_thread;
+//    DetectThread detect_thread;
 
 public:
     int queue_id;

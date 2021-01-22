@@ -123,29 +123,29 @@ Result DetectThread::result_to_uchars(std::vector<BBox> &detect_result, int id, 
     return SUCCESS;
 }
 
-DetectThread::DetectThread(int get_queue_id, std::string client_address, std::string client_port): get_queue_id(get_queue_id), client_address(client_address), runing(true)
+DetectThread::DetectThread(int get_queue_id, std::string client_address, std::string client_port): get_queue_id(get_queue_id), client_address(client_address)
 {
     DetectThread::client_port = Socket::resolveService(client_port, "udp");
     std::thread th(detect_func, this);
     th.detach();
 }
 
-DetectThread::DetectThread(): runing(false)
-{
-
-}
-
-
-void DetectThread::init(int get_queue_id, std::string client_port)
-{
-    DetectThread::client_port = Socket::resolveService(client_port, "udp");
-    DetectThread::get_queue_id = get_queue_id;
-}
-
-void DetectThread::start(std::string client_address)
-{
-    DetectThread::client_address = client_address;
-    runing = true;
-    std::thread th(detect_func, this);
-    th.detach();
-}
+//DetectThread::DetectThread(): runing(false)
+//{
+//
+//}
+//
+//
+//void DetectThread::init(int get_queue_id, std::string client_port)
+//{
+//    DetectThread::client_port = Socket::resolveService(client_port, "udp");
+//    DetectThread::get_queue_id = get_queue_id;
+//}
+//
+//void DetectThread::start(std::string client_address)
+//{
+//    DetectThread::client_address = client_address;
+//    runing = true;
+//    std::thread th(detect_func, this);
+//    th.detach();
+//}
