@@ -84,7 +84,7 @@ ObjectDetect::~ObjectDetect() {
 
 Result ObjectDetect::InitResource() {
     // ACL init
-    const char *aclConfigPath = "../src/acl.json";
+    const char *aclConfigPath = "/opt/zntk/acl.json";
     aclError ret = aclInit(aclConfigPath);
     if (ret != ACL_ERROR_NONE) {
         ERROR_LOG("acl init failed");

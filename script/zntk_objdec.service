@@ -1,0 +1,10 @@
+[Unit]
+Description=ZNTK_OBJDEC
+After=zntk_mkdir.target network-online.target
+
+[Service]
+Type=simple
+ExecStart=/bin/bash /opt/zntk/run.sh
+
+[Install]
+WantedBy=multi-user.target

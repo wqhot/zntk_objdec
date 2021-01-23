@@ -15,7 +15,7 @@
 namespace {
     uint32_t kModelWidth = 416;
     uint32_t kModelHeight = 416;
-    const char* kModelPath = "../model/yolov3.om";
+    const char* kModelPath = "/opt/zntk/yolov3.om";
 }
 
 int DetectThread::detect_func(DetectThread *handler)

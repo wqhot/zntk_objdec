@@ -1,0 +1,11 @@
+[Unit]
+Description=MKMEMDIR
+After=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/mkdir -p /sys/fs/cgroup/memory/usermemory/
+
+[Install]
+WantedBy=multi-user.target
