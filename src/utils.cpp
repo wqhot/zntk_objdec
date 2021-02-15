@@ -1,199 +1,78 @@
 /**
-* Copyright 2020 Huawei Technologies Co., Ltd
+* @file utils.cpp
 *
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-
-* http://www.apache.org/licenses/LICENSE-2.0
-
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-
-* File utils.cpp
-* Description: handle file operations
+* Copyright (C) 2020. Huawei Technologies Co., Ltd. All rights reserved.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 */
 #include "utils.h"
-#include <map>
 #include <iostream>
 #include <fstream>
-#include <unistd.h>
 #include <cstring>
-#include <dirent.h>
-#include <vector>
-#include <string.h>
+
+#if defined(_MSC_VER)
+#include <windows.h>
+#else
+
 #include <sys/stat.h>
-#include <sys/types.h>
+
+#endif
+
 #include "acl/acl.h"
 #include "acl/ops/acl_dvpp.h"
 
-using namespace std;
+bool RunStatus::isDevice_ = false;
 
-namespace {
-const std::string kImagePathSeparator = ",";
-const int kStatSuccess = 0;
-const std::string kFileSperator = "/";
-const std::string kPathSeparator = "/";
-// output image prefix
-const std::string kOutputFilePrefix = "out_";
+Result Utils::ReadBinMemery(std::vector<u_int8_t> &picData, PicDesc &picDesc, void *&inputBuff, uint32_t &memerySize) {
 
-}
-
-bool Utils::IsDirectory(const string &path) {
-    // get path stat
-    struct stat buf;
-    if (stat(path.c_str(), &buf) != kStatSuccess) {
-        return false;
-    }
-
-    // check
-    if (S_ISDIR(buf.st_mode)) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool Utils::IsPathExist(const string &path) {
-    ifstream file(path);
-    if (!file) {
-        return false;
-    }
-    return true;
-}
-
-void Utils::SplitPath(const string &path, vector<string> &path_vec) {
-    char *char_path = const_cast<char*>(path.c_str());
-    const char *char_split = kImagePathSeparator.c_str();
-    char *tmp_path = strtok(char_path, char_split);
-    while (tmp_path) {
-        path_vec.emplace_back(tmp_path);
-        tmp_path = strtok(nullptr, char_split);
-    }
-}
-
-void Utils::GetAllFiles(const string &path, vector<string> &file_vec) {
-    // split file path
-    vector<string> path_vector;
-    SplitPath(path, path_vector);
-
-    for (string every_path : path_vector) {
-        // check path exist or not
-        if (!IsPathExist(every_path)) {
-            ERROR_LOG("Failed to deal path=%s. Reason: not exist "
-                      "or can not access.", every_path.c_str());                      
-            continue;
-        }
-        // get files in path and sub-path
-        GetPathFiles(every_path, file_vec);
-    }
-}
-
-void Utils::GetPathFiles(const string &path, vector<string> &file_vec) {
-    struct dirent *dirent_ptr = nullptr;
-    DIR *dir = nullptr;
-    if (IsDirectory(path)) {
-        dir = opendir(path.c_str());
-        while ((dirent_ptr = readdir(dir)) != nullptr) {
-            // skip . and ..
-            if (dirent_ptr->d_name[0] == '.') {
-                continue;
-            }
-
-            // file path
-            string full_path = path + kPathSeparator + dirent_ptr->d_name;
-            // directory need recursion
-            if (IsDirectory(full_path)) {
-                GetPathFiles(full_path, file_vec);
-            } else {
-                // put file
-                file_vec.emplace_back(full_path);
-            }
-        }
-    } else {
-        file_vec.emplace_back(path);
-    }
-}
-
-void* Utils::CopyDataDeviceToLocal(void* deviceData, uint32_t dataSize) {
-    uint8_t* buffer = new uint8_t[dataSize];
-    if (buffer == nullptr) {
-        ERROR_LOG("New malloc memory failed");
-        return nullptr;
-    }
-
-    aclError aclRet = aclrtMemcpy(buffer, dataSize, deviceData, dataSize, ACL_MEMCPY_DEVICE_TO_HOST);
-    if (aclRet != ACL_ERROR_NONE) {
-        ERROR_LOG("Copy device data to local failed, aclRet is %d", aclRet);
-        delete[](buffer);
-        return nullptr;
-    }
-
-    return (void*)buffer;
-}
-
-void* Utils::CopyDataToDevice(void* data, uint32_t dataSize, aclrtMemcpyKind policy) {
-    void* buffer = nullptr;
-    aclError aclRet = aclrtMalloc(&buffer, dataSize, ACL_MEM_MALLOC_HUGE_FIRST);
-    if (aclRet != ACL_ERROR_NONE) {
-        ERROR_LOG("malloc device data buffer failed, aclRet is %d", aclRet);
-        return nullptr;
-    }
-
-    aclRet = aclrtMemcpy(buffer, dataSize, data, dataSize, policy);
-    if (aclRet != ACL_ERROR_NONE) {
-        ERROR_LOG("Copy data to device failed, aclRet is %d", aclRet);
-        (void)aclrtFree(buffer);
-        return nullptr;
-    }
-
-    return buffer;
-}
-
-void* Utils::CopyDataDeviceToDevice(void* deviceData, uint32_t dataSize) {
-    return CopyDataToDevice(deviceData, dataSize, ACL_MEMCPY_DEVICE_TO_DEVICE);
-}
-
-void* Utils::CopyDataHostToDevice(void* deviceData, uint32_t dataSize) {
-    return CopyDataToDevice(deviceData, dataSize, ACL_MEMCPY_HOST_TO_DEVICE);
-}
-
-Result Utils::CopyImageDataToDevice(ImageData& imageDevice, 
-                                    ImageData srcImage, aclrtRunMode mode) {
-    void * buffer;
-    if (mode == ACL_HOST)
-        buffer = Utils::CopyDataHostToDevice(srcImage.data.get(), srcImage.size);
-    else
-        buffer = Utils::CopyDataDeviceToDevice(srcImage.data.get(), srcImage.size);
-
-    if (buffer == nullptr) {
-        ERROR_LOG("Copy image to device failed");
+    uint32_t binMemeryBufferLen = picData.size();
+    if (binMemeryBufferLen == 0) {
+        ERROR_LOG("binmemery is empty");
         return FAILED;
     }
 
-    imageDevice.width = srcImage.width;
-    imageDevice.height = srcImage.height;
-    imageDevice.size = srcImage.size;
-    imageDevice.data.reset((uint8_t*)buffer, [](uint8_t* p) { aclrtFree((void *)p); });
+    aclError ret;
+    if (!(RunStatus::GetDeviceStatus())) { // app is running in host
+        ret = aclrtMallocHost(&inputBuff, binMemeryBufferLen);
+        if (inputBuff == nullptr) {
+            ERROR_LOG("malloc binFileBufferData failed. binMemeryBufferLen is %u, errorCode is %d",
+                      binMemeryBufferLen, static_cast<int32_t>(ret));
+            return FAILED;
+        }
+    } else { // app is running in device
+        ret = acldvppMalloc(&inputBuff, binMemeryBufferLen);
+        if (ret != ACL_ERROR_NONE) {
+            ERROR_LOG("malloc device buffer failed. size is %u, errorCode is %d",
+                      binMemeryBufferLen, static_cast<int32_t>(ret));
+            return FAILED;
+        }
+    }
+    memcpy(static_cast<u_int8_t *>(inputBuff), static_cast<u_int8_t *>(picData.data()), binMemeryBufferLen);
+    memerySize = binMemeryBufferLen;
+
+    int32_t components = 0;
+    ret = acldvppJpegGetImageInfo(inputBuff, binMemeryBufferLen, &picDesc.width, &picDesc.height, &components);
+    if (ret != ACL_ERROR_NONE) {
+        ERROR_LOG("acldvppJpegGetImageInfo failed, errorCode is %d", static_cast<int32_t>(ret));
+        return FAILED;
+    }
+    INFO_LOG("read image memery success, width = %u, height = %u",
+             picDesc.width, picDesc.height);
 
     return SUCCESS;
 }
 
-int Utils::ReadImageFile(ImageData& image, std::string fileName)
-{
-    struct stat sBuf;
-    int fileStatus = stat(fileName.data(), &sBuf);
-    if (fileStatus == -1) {
-        ERROR_LOG("failed to get file");
+
+
+Result Utils::ReadBinFile(PicDesc &picDesc, void *&inputBuff, uint32_t &fileSize) {
+    std::string fileName = picDesc.picName;
+    if (CheckPathIsFile(fileName) == FAILED) {
+        ERROR_LOG("%s is not a file", fileName.c_str());
         return FAILED;
     }
-    if (S_ISREG(sBuf.st_mode) == 0) {
-        ERROR_LOG("%s is not a file, please enter a file", fileName.c_str());
-        return FAILED;
-    }
+
     std::ifstream binFile(fileName, std::ifstream::binary);
     if (binFile.is_open() == false) {
         ERROR_LOG("open file %s failed", fileName.c_str());
@@ -207,38 +86,180 @@ int Utils::ReadImageFile(ImageData& image, std::string fileName)
         binFile.close();
         return FAILED;
     }
-
     binFile.seekg(0, binFile.beg);
 
-    uint8_t* binFileBufferData = new(std::nothrow) uint8_t[binFileBufferLen];
-    if (binFileBufferData == nullptr) {
-        ERROR_LOG("malloc binFileBufferData failed");
-        binFile.close();
+    aclError ret;
+    if (!(RunStatus::GetDeviceStatus())) { // app is running in host
+        ret = aclrtMallocHost(&inputBuff, binFileBufferLen);
+        if (inputBuff == nullptr) {
+            ERROR_LOG("malloc binFileBufferData failed. binFileBufferLen is %u, errorCode is %d",
+                      binFileBufferLen, static_cast<int32_t>(ret));
+            binFile.close();
+            return FAILED;
+        }
+    } else { // app is running in device
+        ret = acldvppMalloc(&inputBuff, binFileBufferLen);
+        if (ret != ACL_ERROR_NONE) {
+            ERROR_LOG("malloc device buffer failed. size is %u, errorCode is %d",
+                      binFileBufferLen, static_cast<int32_t>(ret));
+            binFile.close();
+            return FAILED;
+        }
+    }
+    binFile.read(static_cast<char *>(inputBuff), binFileBufferLen);
+    binFile.close();
+    fileSize = binFileBufferLen;
+
+    int32_t components = 0;
+    ret = acldvppJpegGetImageInfo(inputBuff, binFileBufferLen, &picDesc.width, &picDesc.height, &components);
+    if (ret != ACL_ERROR_NONE) {
+        ERROR_LOG("acldvppJpegGetImageInfo failed, errorCode is %d", static_cast<int32_t>(ret));
         return FAILED;
     }
-    binFile.read((char *)binFileBufferData, binFileBufferLen);
-    binFile.close();
-
-    int32_t ch = 0;
-    acldvppJpegGetImageInfo(binFileBufferData, binFileBufferLen,
-              &(image.width), &(image.height), &ch);
-    image.data.reset(binFileBufferData, [](uint8_t* p) { delete[](p); });
-    image.size = binFileBufferLen;
+    INFO_LOG("read image file[%s] success, width = %u, height = %u",
+             fileName.c_str(), picDesc.width, picDesc.height);
 
     return SUCCESS;
 }
 
-int Utils::get_image_from_buffer(ImageData& image, u_int8_t *binFileBufferData, uint32_t binFileBufferLen)
-{
-    if (binFileBufferData == nullptr) {
-        ERROR_LOG("malloc binFileBufferData failed");
+Result Utils::GetDeviceBufferOfPictureMemery(std::vector<u_int8_t> &picData, PicDesc &picDesc, void *&picDevBuffer, uint32_t &devPicBufferSize) {
+
+    uint32_t inputBuffSize = 0;
+    void *inputBuff = nullptr;
+    Result ret = ReadBinMemery(picData, picDesc, inputBuff, inputBuffSize);
+    if (ret != SUCCESS) {
+        ERROR_LOG("read memery failed, picData length is %d", picData.size());
+        return FAILED;
+    }
+    aclError aclRet = acldvppJpegGetImageInfo(inputBuff, inputBuffSize, &picDesc.width, &picDesc.height, nullptr);
+    if (aclRet != ACL_ERROR_NONE) {
+        ERROR_LOG("get jpeg image info failed, errorCode is %d", static_cast<int32_t>(aclRet));
+        if (!(RunStatus::GetDeviceStatus())) {
+            (void) aclrtFreeHost(inputBuff);
+        } else {
+            (void) acldvppFree(inputBuff);
+        }
+        return FAILED;
+    }
+    aclRet = acldvppJpegPredictDecSize(inputBuff, inputBuffSize, PIXEL_FORMAT_YUV_SEMIPLANAR_420,
+                                       &picDesc.jpegDecodeSize);
+    if (aclRet != ACL_ERROR_NONE) {
+        ERROR_LOG("get jpeg decode size failed, errorCode is %d", static_cast<int32_t>(aclRet));
+        if (!(RunStatus::GetDeviceStatus())) {
+            (void) aclrtFreeHost(inputBuff);
+        } else {
+            (void) acldvppFree(inputBuff);
+        }
         return FAILED;
     }
 
-    int32_t ch = 0;
-    acldvppJpegGetImageInfo(binFileBufferData, binFileBufferLen,
-                            &(image.width), &(image.height), &ch);
-    image.data.reset(binFileBufferData, [](uint8_t* p) { delete[](p); });
-    image.size = binFileBufferLen;
+    if (!(RunStatus::GetDeviceStatus())) { // app is running in host
+        aclRet = acldvppMalloc(&picDevBuffer, inputBuffSize);
+        if (aclRet != ACL_ERROR_NONE) {
+            ERROR_LOG("malloc device buffer failed. size is %u, errorCode is %d",
+                      inputBuffSize, static_cast<int32_t>(aclRet));
+            (void) aclrtFreeHost(inputBuff);
+            return FAILED;
+        }
+
+        // if app is running in host, need copy data from host to device
+        aclRet = aclrtMemcpy(picDevBuffer, inputBuffSize, inputBuff, inputBuffSize, ACL_MEMCPY_HOST_TO_DEVICE);
+        if (aclRet != ACL_ERROR_NONE) {
+            ERROR_LOG("memcpy failed. device buffer size is %u, input host buffer size is %u, errorCode is %d",
+                      inputBuffSize, inputBuffSize, static_cast<int32_t>(aclRet));
+            (void) acldvppFree(picDevBuffer);
+            (void) aclrtFreeHost(inputBuff);
+            return FAILED;
+        }
+        (void) aclrtFreeHost(inputBuff);
+    } else { // app is running in device
+        picDevBuffer = inputBuff;
+    }
+    devPicBufferSize = inputBuffSize;
+
+    return SUCCESS;
+}
+
+Result Utils::GetDeviceBufferOfPicture(PicDesc &picDesc, void *&picDevBuffer, uint32_t &devPicBufferSize) {
+    if (picDesc.picName.empty()) {
+        ERROR_LOG("picture file name is empty");
+        return FAILED;
+    }
+
+    uint32_t inputBuffSize = 0;
+    void *inputBuff = nullptr;
+    Result ret = ReadBinFile(picDesc, inputBuff, inputBuffSize);
+    if (ret != SUCCESS) {
+        ERROR_LOG("read bin file failed, file name is %s", picDesc.picName.c_str());
+        return FAILED;
+    }
+    aclError aclRet = acldvppJpegGetImageInfo(inputBuff, inputBuffSize, &picDesc.width, &picDesc.height, nullptr);
+    if (aclRet != ACL_ERROR_NONE) {
+        ERROR_LOG("get jpeg image info failed, errorCode is %d", static_cast<int32_t>(aclRet));
+        if (!(RunStatus::GetDeviceStatus())) {
+            (void) aclrtFreeHost(inputBuff);
+        } else {
+            (void) acldvppFree(inputBuff);
+        }
+        return FAILED;
+    }
+    aclRet = acldvppJpegPredictDecSize(inputBuff, inputBuffSize, PIXEL_FORMAT_YUV_SEMIPLANAR_420,
+                                       &picDesc.jpegDecodeSize);
+    if (aclRet != ACL_ERROR_NONE) {
+        ERROR_LOG("get jpeg decode size failed, errorCode is %d", static_cast<int32_t>(aclRet));
+        if (!(RunStatus::GetDeviceStatus())) {
+            (void) aclrtFreeHost(inputBuff);
+        } else {
+            (void) acldvppFree(inputBuff);
+        }
+        return FAILED;
+    }
+
+    if (!(RunStatus::GetDeviceStatus())) { // app is running in host
+        aclRet = acldvppMalloc(&picDevBuffer, inputBuffSize);
+        if (aclRet != ACL_ERROR_NONE) {
+            ERROR_LOG("malloc device buffer failed. size is %u, errorCode is %d",
+                      inputBuffSize, static_cast<int32_t>(aclRet));
+            (void) aclrtFreeHost(inputBuff);
+            return FAILED;
+        }
+
+        // if app is running in host, need copy data from host to device
+        aclRet = aclrtMemcpy(picDevBuffer, inputBuffSize, inputBuff, inputBuffSize, ACL_MEMCPY_HOST_TO_DEVICE);
+        if (aclRet != ACL_ERROR_NONE) {
+            ERROR_LOG("memcpy failed. device buffer size is %u, input host buffer size is %u, errorCode is %d",
+                      inputBuffSize, inputBuffSize, static_cast<int32_t>(aclRet));
+            (void) acldvppFree(picDevBuffer);
+            (void) aclrtFreeHost(inputBuff);
+            return FAILED;
+        }
+        (void) aclrtFreeHost(inputBuff);
+    } else { // app is running in device
+        picDevBuffer = inputBuff;
+    }
+    devPicBufferSize = inputBuffSize;
+
+    return SUCCESS;
+}
+
+Result Utils::CheckPathIsFile(const std::string &fileName) {
+#if defined(_MSC_VER)
+    DWORD bRet = GetFileAttributes((LPCSTR)fileName.c_str());
+    if (bRet == FILE_ATTRIBUTE_DIRECTORY) {
+        ERROR_LOG("%s is not a file, please enter a file", fileName.c_str());
+        return FAILED;
+    }
+#else
+    struct stat sBuf;
+    int fileStatus = stat(fileName.data(), &sBuf);
+    if (fileStatus == -1) {
+        ERROR_LOG("failed to get file");
+        return FAILED;
+    }
+    if (S_ISREG(sBuf.st_mode) == 0) {
+        ERROR_LOG("%s is not a file, please enter a file", fileName.c_str());
+        return FAILED;
+    }
+#endif
     return SUCCESS;
 }

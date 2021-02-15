@@ -8,10 +8,19 @@
 #include <vector>
 #include "utils.h"
 #include "PracticalSocket.h"
+#include "acl/acl.h"
+#include "model_process.h"
+#include "dvpp_process.h"
+#include "post_process.h"
+#include "thread_queue.h"
 
 class DetectThread {
     private:
     static int detect_func(DetectThread *handler);
+    void ProcessOutput(const aclmdlDataset *output, float xScale, float yScale, std::vector <BBox> &result);
+    Result GetImageResizeBuffer(std::vector<u_int8_t> &image_buffer, int resizeWidth, int resizeHeight,
+                            void *&buffer, size_t &bufferLen,
+                            float &xScale, float &yScale);
     Result result_to_uchars(std::vector<BBox> &detect_result, int id, std::vector<u_char> &send_buffer);
     u_char uint2chars(uint32_t num, std::vector<unsigned char> &cs);
 

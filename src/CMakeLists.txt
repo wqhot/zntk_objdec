@@ -2,16 +2,20 @@
 
 # CMake lowest version requirement
 cmake_minimum_required(VERSION 3.5.1)
-
+SET(CMAKE_C_COMPILER /usr/bin/aarch64-linux-gnu-gcc)
+SET(CMAKE_CXX_COMPILER /usr/bin/aarch64-linux-gnu-g++)
+SET(CMAKE_SKIP_RPATH TRUE)
 # project information
-project(classification)
+project(ACL_RESNET50)
 
 # Compile options
 add_compile_options(-std=c++11)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  "../../../out")
-set(CMAKE_CXX_FLAGS_DEBUG "-fPIC -O0 -g -Wall -pthread")
-set(CMAKE_CXX_FLAGS_RELEASE "-fPIC -O2 -Wall -pthread")
+find_package(Threads)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  "../out")
+set(CMAKE_CXX_FLAGS_DEBUG "-fPIC -O0 -g -Wall")
+set(CMAKE_CXX_FLAGS_RELEASE "-fPIC -O2 -Wall")
 
 add_definitions(-DENABLE_DVPP_INTERFACE)
 set(INC_PATH $ENV{DDK_PATH})
@@ -38,8 +42,6 @@ else ()
     set(ARCH "x86")
 endif()
 
-find_package(Threads)
-
 # Header path
 include_directories(
     $ENV{HOME}/ascend_ddk/${ARCH}/include/
@@ -56,36 +58,22 @@ endif()
 link_directories(
     ${LIB_PATH}
     $ENV{HOME}/ascend_ddk/${ARCH}/lib/
-    ${INC_PATH}/atc/lib64
 )
 
-add_library(aclib_util STATIC
+add_executable(main
         utils.cpp
         model_process.cpp
-        object_detect.cpp
         dvpp_process.cpp
-        dvpp_resize.cpp
-        dvpp_jpegd.cpp
-        )
-
-add_library(translib STATIC
+        post_process.cpp
         recv_thread.cpp
-        thread_manage.cpp
         detect_thread.cpp
         PracticalSocket.cpp
-        dvpp_resize.cpp
-        dvpp_jpegd.cpp
-        )
+        main.cpp)
 
-target_link_libraries(translib aclib_util ascendcl acl_dvpp stdc++ opencv_core opencv_imgproc opencv_imgcodecs dl rt ${CMAKE_THREAD_LIBS_INIT})
+if(target STREQUAL "Simulator_Function")
+    target_link_libraries(main funcsim)
+else()
+    target_link_libraries(main ascendcl acl_dvpp opencv_core opencv_imgproc opencv_imgcodecs stdc++ ${CMAKE_THREAD_LIBS_INIT})
+endif()
 
-add_executable(main main.cpp)
-target_link_libraries(main translib aclib_util)
-
-# if(target STREQUAL "Simulator_Function")
-#    target_link_libraries(main aclib_util trans libfuncsim)
-# else()
-#     target_link_libraries(main trans)
-# endif()
-
-# install(TARGETS main DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+install(TARGETS main DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})

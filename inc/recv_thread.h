@@ -8,7 +8,7 @@
 #include <thread>
 #include <condition_variable>
 #include <mutex>
-#include "thread_manage.h"
+#include "thread_queue.h"
 #include "PracticalSocket.h"
 #include "detect_thread.h"
 
