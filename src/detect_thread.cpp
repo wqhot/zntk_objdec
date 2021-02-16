@@ -16,7 +16,7 @@ namespace
 {
     uint32_t kModelWidth = 416;
     uint32_t kModelHeight = 416;
-    const char *kModelPath = "../model/yolov4.om";
+    const char *kModelPath = "/opt/zntk/model/yolov4.om";
 } // namespace
 
 #define CHECK_FUNCTION_RESULT(name, result) \
