@@ -29,6 +29,15 @@ namespace
     }
 
 
+#define CHECK_FUNCTION_RESULT_NOTQUIT(name, result) \
+    {                                       \
+        if (result != SUCCESS)              \
+        {                                   \
+            ERROR_LOG(#name " failed");     \
+            continue;                      \
+        }                                   \
+    }
+
 void BufferDeleter_Thread(void *p) {
     if (!RunStatus::GetDeviceStatus()) {
         if (p != nullptr) {
@@ -196,19 +205,19 @@ int DetectThread::detect_func(DetectThread *handler)
         float yScale = 1;
         rlt = handler->GetImageResizeBuffer(item.first, width, height,
                                             inputBuffer, inputLen, xScale, yScale);
-        CHECK_FUNCTION_RESULT(handler->GetImageResizeBuffer, rlt);
+        CHECK_FUNCTION_RESULT_NOTQUIT(handler->GetImageResizeBuffer, rlt);
 
         // Input memory for creating models
         rlt = modelProcess.CreateInput(inputBuffer, inputLen);
-        CHECK_FUNCTION_RESULT(modelProcess.LoadModel, rlt);
+        CHECK_FUNCTION_RESULT_NOTQUIT(modelProcess.LoadModel, rlt);
 
         // Create the output memory of the model
         rlt = modelProcess.CreateOutput();
-        CHECK_FUNCTION_RESULT(modelProcess.CreateOutput, rlt);
+        CHECK_FUNCTION_RESULT_NOTQUIT(modelProcess.CreateOutput, rlt);
 
         // The input and output memory is transferred to the model instance for synchronous execution
         rlt = modelProcess.Execute();
-        CHECK_FUNCTION_RESULT(modelProcess.Execute, rlt);
+        CHECK_FUNCTION_RESULT_NOTQUIT(modelProcess.Execute, rlt);
 
         // After execution, the post-processing is carried out for the output memory
         const aclmdlDataset *output = modelProcess.GetModelOutputData();
