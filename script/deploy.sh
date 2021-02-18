@@ -1,6 +1,7 @@
 #!/bin/bash
 
 cd ../build
+cmake -D CMAKE_BUILD_TYPE=RELEASE
 make -j6
 cd ../script
 ssh HwHiAiUser@192.168.50.137 "sudo mkdir -p /opt/zntk/out && sudo mkdir -p /opt/zntk/model"

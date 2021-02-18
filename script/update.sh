@@ -1,6 +1,7 @@
 #!/bin/bash
 
 cd ../build
+cmake -D CMAKE_BUILD_TYPE=RELEASE ..
 make -j6
 cd ../script
 

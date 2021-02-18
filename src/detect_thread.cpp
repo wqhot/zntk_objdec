@@ -11,6 +11,7 @@
 #include <string>
 #include <memory>
 #include "detect_thread.h"
+#include <tictoc.h>
 
 namespace
 {
@@ -197,6 +198,7 @@ int DetectThread::detect_func(DetectThread *handler)
         {
             continue;
         }
+        TicToc tic;
         std::vector<BBox> detect_result;
         void *inputBuffer = nullptr;
         int id = item.second;
@@ -228,6 +230,7 @@ int DetectThread::detect_func(DetectThread *handler)
         handler->sock.sendTo(&send_buffer[0], send_buffer.size(),
                              handler->client_address, handler->client_port);
         std::cout << "send result " << send_buffer.size() << std::endl;
+        tic.toc_print("detect");
     }
 }
 
